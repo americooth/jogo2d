@@ -1,28 +1,35 @@
 const canvas = document.getElementById('jogoCanvas');
 const ctx = canvas.getContext('2d');
 
+const fundo = new Image();
+fundo.src = 'cidade.jpg';
+
+const pikachu = new Image();
+pikachu.src = 'pikachu.png';
+
 let gravidade = 0.5;
 let gameover = false;
 let pulosRestantes = 2;
 let pontos = 0;
 let tempoInicio = Date.now();
 let tempoDecorrido = 0;
+let movimentoEsquerda = false;
+let movimentoDireita = false;
 
-// Reinicia o jogo
 function reiniciarJogo() {
   gameover = false;
   pulosRestantes = 2;
   pontos = 0;
   tempoInicio = Date.now();
-  personagem.y = canvas.height - 50;
+  personagem.y = canvas.height - 100;
+  personagem.x = 100;
   personagem.velocidade_y = 0;
   obstaculo.x = canvas.width;
   obstaculo.velocidade_x = 10;
-  loop(); // Reinicia o loop do jogo
+  loop();
 }
 
-// Evento para controle do pulo
-document.addEventListener('keypress', (evento) => {
+document.addEventListener('keydown', (evento) => {
   if (evento.code === 'Space' && !gameover) {
     if (pulosRestantes > 0) {
       personagem.velocidade_y = pulosRestantes === 2 ? 12 : 10;
@@ -30,20 +37,34 @@ document.addEventListener('keypress', (evento) => {
       pulosRestantes--;
     }
   }
-
-  // Evento para reiniciar o jogo ao pressionar 'Z'
+  if (evento.code === 'KeyA') {
+    movimentoEsquerda = true;
+  }
+  if (evento.code === 'KeyD') {
+    movimentoDireita = true;
+  }
   if (evento.code === 'KeyZ' && gameover) {
     reiniciarJogo();
   }
 });
 
+document.addEventListener('keyup', (evento) => {
+  if (evento.code === 'KeyA') {
+    movimentoEsquerda = false;
+  }
+  if (evento.code === 'KeyD') {
+    movimentoDireita = false;
+  }
+});
+
 const personagem = {
   x: 100,
-  y: canvas.height - 50,
+  y: canvas.height - 100,
   largura: 50,
   altura: 50,
   velocidade_y: 0,
-  pulando: false
+  pulando: false,
+  velocidade_x: 5
 };
 
 const obstaculo = {
@@ -54,18 +75,28 @@ const obstaculo = {
   velocidade_x: 10
 };
 
+function desenharFundo() {
+  ctx.drawImage(fundo, 0, 0, canvas.width, canvas.height);
+}
+
 function desenharPersonagem() {
-  ctx.fillStyle = 'white';
-  ctx.fillRect(personagem.x, personagem.y, personagem.largura, personagem.altura);
+  ctx.drawImage(pikachu, personagem.x, personagem.y, personagem.largura, personagem.altura);
 }
 
 function atualizarPersonagem() {
+  if (movimentoEsquerda && personagem.x > 0) {
+    personagem.x -= personagem.velocidade_x;
+  }
+  if (movimentoDireita && personagem.x + personagem.largura < canvas.width) {
+    personagem.x += personagem.velocidade_x;
+  }
+
   if (personagem.pulando) {
     personagem.y -= personagem.velocidade_y;
     personagem.velocidade_y -= gravidade;
     
-    if (personagem.y >= canvas.height - 50) {
-      personagem.y = canvas.height - 50;
+    if (personagem.y >= canvas.height - 100) {
+      personagem.y = canvas.height - 100;
       personagem.velocidade_y = 0;
       personagem.pulando = false;
       pulosRestantes = 2;
@@ -74,13 +105,12 @@ function atualizarPersonagem() {
 }
 
 function desenharObstaculo() {
-  ctx.fillStyle = 'green';
+  ctx.fillStyle = 'red';
   ctx.fillRect(obstaculo.x, obstaculo.y, obstaculo.largura, obstaculo.altura);
 }
 
 function atualizarObstaculo() {
   obstaculo.x -= obstaculo.velocidade_x;
-
   if (obstaculo.x <= -obstaculo.largura) {
     obstaculo.x = canvas.width;
     pontos += 10;
@@ -100,54 +130,33 @@ function verificaColisao() {
     ctx.fillText('GAME OVER', 50, 100);
     gameover = true;
     tempoDecorrido = Math.floor((Date.now() - tempoInicio) / 1000);
-    salvarPontuacao();
   }
 }
 
 function desenharPontuacaoETempo() {
-  ctx.fillStyle = 'black';
+  ctx.fillStyle = 'white';
   ctx.font = '20px Arial';
   ctx.fillText(`Pontos: ${pontos}`, 20, 30);
-
   tempoDecorrido = Math.floor((Date.now() - tempoInicio) / 1000);
   ctx.fillText(`Tempo: ${tempoDecorrido}s`, 20, 60);
 }
 
-function salvarPontuacao() {
-  const pontuacaoAnterior = localStorage.getItem('pontuacao');
-  const tempoAnterior = localStorage.getItem('tempo');
-
-  if (!pontuacaoAnterior || pontos > parseInt(pontuacaoAnterior)) {
-    localStorage.setItem('pontuacao', pontos);
-    localStorage.setItem('tempo', tempoDecorrido);
-  }
-}
-
-function mostrarMelhorPontuacao() {
-  const melhorPontuacao = localStorage.getItem('pontuacao');
-  const melhorTempo = localStorage.getItem('tempo');
-
-  if (melhorPontuacao && melhorTempo) {
-    ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Melhor Pontuação: ${melhorPontuacao}`, 20, 90);
-    ctx.fillText(`Melhor Tempo: ${melhorTempo}s`, 20, 120);
-  }
-}
-
 function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  desenharFundo();
+  desenharPersonagem();
+  atualizarPersonagem();
+  desenharObstaculo();
+  atualizarObstaculo();
+  verificaColisao();
+  desenharPontuacaoETempo();
   if (!gameover) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    desenharPersonagem();
-    atualizarPersonagem();
-    desenharObstaculo();
-    atualizarObstaculo();
-    verificaColisao();
-    desenharPontuacaoETempo();
-    mostrarMelhorPontuacao();
     requestAnimationFrame(loop);
   }
 }
 
-loop();
-//
+fundo.onload = () => {
+  pikachu.onload = () => {
+    loop();
+  };
+};
